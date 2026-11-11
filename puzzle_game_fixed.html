@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090b12">
+<title>НЕПРАВИЛЬНО — три испытания</title>
+<style>
+:root{color-scheme:dark;--bg:#090b12;--panel:#131827;--line:#29334a;--text:#eef2ff;--muted:#aab5cf;--pink:#ff4fa3;--cyan:#58e1df;--gold:#ffd166}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#26304d 0,transparent 55%),var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;padding:18px}
+.wrap{width:min(760px,100%)}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:center;color:var(--muted);font-size:12px;letter-spacing:.12em;text-transform:uppercase;flex-wrap:wrap}
+.logo{color:var(--cyan);font-weight:900}
+.card{margin-top:18px;background:linear-gradient(145deg,#171e30,#101522);border:1px solid var(--line);border-radius:24px;padding:clamp(20px,5vw,42px);box-shadow:0 24px 90px #0008}
+.eyebrow{color:var(--pink);font-size:12px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+.progress{display:flex;gap:8px;margin:18px 0 28px}
+.dot{height:5px;flex:1;border-radius:9px;background:#30394d}
+.dot.done{background:var(--cyan)}
+.stamp{font-size:12px;color:var(--gold);letter-spacing:.16em;font-weight:900}
+h1{font-size:clamp(30px,7vw,54px);line-height:1.05;margin:12px 0 14px;letter-spacing:-.04em}
+p{color:#c1c9dc}
+.riddle{font-size:clamp(18px,3.4vw,23px);line-height:1.5;color:#fff;margin:26px 0 22px;white-space:pre-line}
+.inputrow{display:flex;gap:10px;flex-wrap:wrap}
+input{flex:1;min-width:180px;background:#090e19;border:1px solid #3a4560;border-radius:12px;padding:15px 16px;color:white;font:inherit;outline:none}
+input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #58e1df20}
+button{border:0;border-radius:12px;padding:14px 20px;font:700 15px system-ui;cursor:pointer;transition:.18s}
+button:hover{transform:translateY(-2px);filter:brightness(1.08)}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.primary{background:var(--cyan);color:#071317}
+.secondary{background:#252e43;color:#e8edff;border:1px solid #3b4762}
+.hint{margin-top:14px;color:var(--muted);font-size:13px}
+.feedback{min-height:28px;margin-top:14px;font-weight:700}
+.good{color:var(--cyan)}.bad{color:#ff789d}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.hidden{display:none!important}
+.prize{border:1px solid #66512c;background:linear-gradient(135deg,#292318,#171827);border-radius:18px;padding:24px;margin-top:22px}
+.prize blockquote{font-size:clamp(22px,4vw,32px);line-height:1.3;margin:10px 0;color:#ffe6a3}
+.tiny{font-size:12px;color:var(--muted);margin-top:25px}
+.shake{animation:shake .25s linear}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media(max-width:480px){.inputrow button{width:100%}.top{font-size:10px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="top"><span class="logo">◈ НЕПРАВИЛЬНО</span><span>3 испытания · подсказки разрешены</span></div>
+
+  <section class="card" id="game">
+    <div class="eyebrow" id="eyebrow">Испытание 01 / 03</div>
+    <div class="progress"><i class="dot" id="d0"></i><i class="dot" id="d1"></i><i class="dot" id="d2"></i></div>
+    <div class="stamp" id="rank">СЛОЖНО</div>
+    <h1 id="title">Карта без дорог</h1>
+    <p id="intro"></p>
+    <div class="riddle" id="riddle"></div>
+    <div class="inputrow">
+      <input id="answer" autocomplete="off" placeholder="Твой ответ…" aria-label="Ответ на загадку">
+      <button class="primary" id="submit" type="button">Проверить</button>
+    </div>
+    <div class="feedback" id="feedback" aria-live="polite"></div>
+    <div class="actions">
+      <button class="secondary" id="hint" type="button">Получить подсказку</button>
+      <button class="primary hidden" id="next" type="button">Дальше →</button>
+    </div>
+    <div class="hint" id="hinttext"></div>
+    <div class="tiny">Регистр и лишние пробелы не важны. Можно отвечать своими словами.</div>
+  </section>
+
+  <section class="card hidden" id="win">
+    <div class="eyebrow">Система зафиксировала невозможное</div>
+    <div class="stamp">ВСЕ ТРИ ИСПЫТАНИЯ ПРОЙДЕНЫ</div>
+    <h1>Вы победили.</h1>
+    <p>Ты нашёл выход там, где его почти не было. Но кое-что ещё осталось.</p>
+    <button class="primary" id="reveal" type="button">Увидеть приз</button>
+    <div class="prize hidden" id="prize"><div class="stamp">ТВОЙ ПРИЗ</div><blockquote>«Это то что я люблю, но у меня его мало. Я им хвастался даже))»</blockquote></div>
+    <div class="actions"><button class="secondary" id="restart" type="button">Пройти заново</button></div>
+  </section>
+</main>
+<script>
+"use strict";
+const levels = [
+  {
+    rank:"СЛОЖНО",
+    title:"Карта без дорог",
+    intro:"Начнём с загадки, где важна не скорость, а внимательность.",
+    riddle:"У меня есть города, но нет домов. Есть леса, но нет деревьев. Есть реки, но нет воды. Что я такое?",
+    answers:["карта","географическая карта","карта мира"],
+    hint:"На меня смотрят, когда хотят найти дорогу или узнать, где находится страна."
+  },
+  {
+    rank:"ХАРД",
+    title:"Чем больше, тем больше",
+    intro:"Здесь ответ спрятан в буквальном смысле слов.",
+    riddle:"Чем больше из меня забирают, тем больше я становлюсь. Меня можно выкопать лопатой. Что я такое?",
+    answers:["яма","дырка","отверстие"],
+    hint:"Если копать землю и убирать её, это постепенно становится глубже и шире."
+  },
+  {
+    rank:"МЕГА ХАРД",
+    title:"Две верёвки и 45 минут",
+    intro:"Последнее испытание требует придумать последовательность действий. Читай условие внимательно.",
+    riddle:"У тебя есть две верёвки. Каждая сгорает ровно за 60 минут, но горит НЕРАВНОМЕРНО: половина верёвки может сгореть не за 30 минут. Есть спички. Как отмерить ровно 45 минут, используя только эти верёвки и спички?\n\nВведи только количество минут.",
+    answers:["45","45 минут","сорок пять","сорок пять минут"],
+    hint:"Одну верёвку нужно поджечь сразу с двух концов. Подумай, сколько времени она будет гореть."
+  }
+];
+
+let level=0;
+let solved=[false,false,false];
+let hintUsed=[false,false,false];
+const $ = id => document.getElementById(id);
+
+function normalize(value){
+  return value.toLocaleLowerCase("ru-RU").replace(/ё/g,"е").replace(/[.,!?;:()«»"'`]/g," ").replace(/\s+/g," ").trim();
+}
+function render(){
+  const item=levels[level];
+  $("eyebrow").textContent=`Испытание 0${level+1} / 03`;
+  $("rank").textContent=item.rank;
+  $("title").textContent=item.title;
+  $("intro").textContent=item.intro;
+  $("riddle").textContent=item.riddle;
+  $("answer").value="";
+  $("answer").disabled=false;
+  $("submit").disabled=false;
+  $("feedback").textContent="";
+  $("feedback").className="feedback";
+  $("hinttext").textContent="";
+  $("next").classList.add("hidden");
+  $("hint").disabled=hintUsed[level];
+  $("hint").textContent=hintUsed[level]?"Подсказка уже использована":"Получить подсказку";
+  for(let i=0;i<3;i++) $("d"+i).classList.toggle("done",solved[i]);
+  $("answer").focus();
+}
+function check(){
+  if(solved[level]) return;
+  const value=normalize($("answer").value);
+  if(!value){$("feedback").textContent="Сначала введи ответ.";$("feedback").className="feedback bad";return;}
+  const accepted=levels[level].answers.map(normalize);
+  const correct=accepted.includes(value);
+  if(correct){
+    solved[level]=true;
+    $("feedback").textContent=level===2
+      ?"Верно! Секрет: первая верёвка гаснет через 30 минут, а вторая — ещё через 15."
+      :"Верно. Хорошо подмечено!";
+    $("feedback").className="feedback good";
+    $("next").classList.remove("hidden");
+    $("answer").disabled=true;
+    $("submit").disabled=true;
+    $("hint").disabled=true;
+    for(let i=0;i<3;i++) $("d"+i).classList.toggle("done",solved[i]);
+  }else{
+    $("feedback").textContent="Не совсем. Перечитай условие и попробуй ещё раз.";
+    $("feedback").className="feedback bad";
+    $("game").classList.remove("shake");
+    void $("game").offsetWidth;
+    $("game").classList.add("shake");
+  }
+}
+$("submit").addEventListener("click",check);
+$("answer").addEventListener("keydown",event=>{if(event.key==="Enter")check();});
+$("hint").addEventListener("click",()=>{
+  $("hinttext").textContent="Подсказка: "+levels[level].hint;
+  hintUsed[level]=true;
+  $("hint").disabled=true;
+  $("hint").textContent="Подсказка использована";
+});
+$("next").addEventListener("click",()=>{
+  if(level<2){level++;render();}
+  else{$("game").classList.add("hidden");$("win").classList.remove("hidden");}
+});
+$("reveal").addEventListener("click",()=>{
+  $("prize").classList.remove("hidden");
+  $("reveal").classList.add("hidden");
+});
+$("restart").addEventListener("click",()=>{
+  level=0;solved=[false,false,false];hintUsed=[false,false,false];
+  $("win").classList.add("hidden");
+  $("game").classList.remove("hidden");
+  render();
+});
+render();
+</script>
+</body>
+</html>
